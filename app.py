@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from MusicRecommender import MusicRecommender  # Make sure this matches your class file name
+from MusicRecommender import MusicRecommender  
 
 # Set page configuration
 st.set_page_config(
