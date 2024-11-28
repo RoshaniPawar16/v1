@@ -8,6 +8,12 @@ class MusicRecommender:
         self.fitted = False
         
     def fit(self):
+        # Check if the required columns exist
+        required_columns = ['user', 'song', 'title', 'artist_name', 'play_count']
+        for col in required_columns:
+            if col not in self.df.columns:
+                raise ValueError(f"Missing required column: {col}")
+
         # Create user-song matrix with weighted play counts
         self.user_song_matrix = pd.pivot_table(
             self.df,
@@ -17,21 +23,30 @@ class MusicRecommender:
             fill_value=0,
             aggfunc='sum'
         )
-        
-        # Calculate normalized play counts
+
+        # Handle edge case where max play count is 0 (to avoid division by zero)
         play_count_max = self.df['play_count'].max()
+        if play_count_max == 0:
+            raise ValueError("All play counts are zero, normalization cannot be performed.")
+
+        # Calculate normalized play counts
         normalized_matrix = self.user_song_matrix.values / play_count_max
-        
-        # Calculate user similarity
+
+        # Calculate user similarity using cosine similarity
         self.similarity_matrix = cosine_similarity(normalized_matrix)
-        
+
         # Calculate song popularity scores
         song_plays = self.df.groupby(['song', 'title', 'artist_name'])['play_count'].agg(['sum', 'count']).reset_index()
-        song_plays['popularity_score'] = (0.7 * song_plays['sum'] / song_plays['sum'].max() + 
-                                        0.3 * song_plays['count'] / song_plays['count'].max())
+        song_plays['popularity_score'] = (
+            0.7 * song_plays['sum'] / song_plays['sum'].max() + 
+            0.3 * song_plays['count'] / song_plays['count'].max()
+        )
         self.song_popularity = song_plays.set_index(['song', 'title', 'artist_name'])['popularity_score']
-        
+
+        # Mark the recommender as fitted
         self.fitted = True
+        print("Recommender system fitted successfully!")
+
     
     def _get_candidate_songs(self, similar_users, user_songs):
         similar_user_songs = self.df[self.df['user'].isin(similar_users)]
